@@ -1,0 +1,7 @@
+TYPE ST_PRODUCT :
+STRUCT
+	productType : E_PRODUCT_TYPE; 
+	processed : BOOL;
+	
+END_STRUCT
+END_TYPE
