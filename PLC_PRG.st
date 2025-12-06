@@ -22,10 +22,10 @@ CASE E_Cla OF
 
   
 	// Transições de estado
-    IF SC THEN // Se o sensor capacitivo detectar algo, muda para o estado de classificação de metal
-		E_Cla := 2;
 	IF NOT(Maquina1) THEN // Se a máquina supervisora mandar um sinal para desligar, a máquina volta pro ócio
 		E_Cla := 0;
+    ELSIF SC THEN // Se o sensor capacitivo detectar algo, muda para o estado de classificação de metal
+		E_Cla := 2;
 	END_IF;
 	
 	2: // Classificação Metal ou não Metal
@@ -68,11 +68,12 @@ CASE E_Cla OF
 END_CASE;
 
 // Transições de estado universais
-IF NOT(Maquina1) THEN
-	E_Cla := 0;
-
 IF Emergencia1 THEN
 	E_Cla := 5;
+	
+ELSIF NOT(Maquina1) THEN
+	E_Cla := 0;
+
 END_IF;
 //------------------------------------------FINAL---------------------------------------------
 //----------------------------------MÁQUINA CLASSIFICADORA------------------------------------
@@ -97,10 +98,10 @@ CASE E_Usi OF
 
   
 	// Transições de estado
-    IF OP2 THEN // Se o sensor optíco 2 detectar a peça, passa para o próximo estado
-		E_Usi := 2;
 	IF NOT(Maquina2) THEN // Se a máquina supervisora mandar o sinal de desligar, a máquina de usinagem volta pro ócio
 		E_Usi := 0;
+    ELSIF OP2 THEN // Se o sensor optíco 2 detectar a peça, passa para o próximo estado
+		E_Usi := 2;
 	END_IF;
 	
 	2: // Pôr peça na usinagem
@@ -143,11 +144,12 @@ CASE E_Usi OF
 END_CASE;
 
 // Transições de estado universais
-IF NOT(Maquina2) THEN
-	E_Usi := 0;
-
 IF Emergencia2 THEN
 	E_Usi := 5;
+	
+ELSIF NOT(Maquina2) THEN
+	E_Usi := 0;
+
 END_IF;
 
 //------------------------------------------FINAL---------------------------------------------
@@ -173,10 +175,10 @@ CASE E_Emp OF
 
   
 	// Transições de estado
-  	IF OP3 THEN // Se o sensor optíco 3 detectar a peça, passa para o próximo estado
-		E_Emp := 2;
 	IF NOT(Maquina3) THEN // Se a máquina supervisora mandar o sinal de desligar, a máquina de empacotamento volta pro ócio
 		E_Emp := 0;
+  	ELSIF OP3 THEN // Se o sensor optíco 3 detectar a peça, passa para o próximo estado
+		E_Emp := 2;
 	END_IF;
 	
 	2: // Pegar item
@@ -239,11 +241,12 @@ CASE E_Emp OF
 END_CASE;
 
 // Transições de estado universais
-IF NOT(Maquina3) THEN
-	E_Emp := 0;
-
 IF Emergencia3 THEN
 	E_Emp := 7;
+	
+ELSIF NOT(Maquina3) THEN
+	E_Emp := 0;
+
 END_IF;
 
 //------------------------------------------FINAL---------------------------------------------
@@ -302,11 +305,12 @@ CASE E_Sup OF
 END_CASE;
 
 // Transições de estado universais
-IF STOP THEN
-	E_Sup := 0;
-
 IF (EMER OR Contador_sc OR Contador_op1 OR Contador_op2 OR Contador_op3) THEN
 	E_Sup := 4;
+	
+ELSIF STOP THEN
+	E_Sup := 0;
+
 END_IF;
 
 //------------------------------------------FINAL---------------------------------------------
