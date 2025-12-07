@@ -11,7 +11,7 @@ VAR_GLOBAL
 	i_SC1Mais 				  : BOOL; // Fim de curso do pistão - estendido
 	i_SC1Menos 	 			  : BOOL; // Fim de curso do pistão - retraido
     i_SI        			  : BOOL; // Sensor indutivo
-	i_SP 					  : REAL; // Sensor da balança (4.0 plástico; 
+	i_SP 					  : REAL; // Sensor da balança (4.0 plástico; 5.0 metal; 1.5 caixa)
 	i_SPMais 				  : BOOL; // Botão de aumentar quantidade de itens por caixa
 	i_SPMenos 				  : BOOL; // Botão de diminuir quantidade de itens por caixa
 	i_SPP 					  : BOOL; // Sensor de item pego pela ponte CNC
