@@ -1,0 +1,31 @@
+{attribute 'qualified_only'}
+VAR_GLOBAL
+    i_DS2        : BOOL;
+    i_Emergencia         : BOOL;
+	i_MachiningCenterOpened : BOOL;
+	i_MachiningCenterIsBusy : BOOL;
+	i_MachiningCenterHasError : BOOL;
+	i_RS1 : BOOL;
+	i_RS2 : BOOL;
+	i_SC    : BOOL;
+	i_SC1Mais : BOOL;
+	i_SC1Menos : BOOL;
+    i_SI        : BOOL;
+	i_SP : REAL;
+	i_SPMais : BOOL;
+	i_SPMenos : BOOL;
+	i_SPP : BOOL;
+	i_Start : BOOL;
+	i_Stop : BOOL;
+    i_XPOS        : REAL;
+    i_YPOS    : REAL;
+    i_ZPOS      : REAL;
+
+    o_RB1 : BOOL;
+    o_E1  : BOOL;
+    o_E2           : BOOL;
+    o_E3         : BOOL;
+    o_X           : REAL;
+    o_Y   : REAL;
+    o_Z  : REAL;
+END_VAR
