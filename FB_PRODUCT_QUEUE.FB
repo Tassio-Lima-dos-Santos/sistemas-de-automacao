@@ -13,11 +13,20 @@ VAR_OUTPUT
 END_VAR
 
 VAR
+	trigPush : R_TRIG;
+    trigPop  : R_TRIG;
+    trigClear : R_TRIG;	
+
     buffer : ARRAY[1..100] OF ST_PRODUCT;
     head   : INT := 1;
     tail   : INT := 1;
     count  : INT := 0;
 END_VAR
+
+// Atualiza os detectores de flanco
+trigPush(CLK := push);
+trigPop(CLK := pop);
+trigClear(CLK := clear);
 
 // Empty queue returns null at itemOut
 IF (count = 0) THEN
@@ -29,19 +38,19 @@ ELSE
 END_IF;
 
 // Clear
-IF clear THEN
+IF trigClear.Q THEN
     head := 1;
     tail := head;
     count := 0;
     itemOut := 0; // NULL
 
 // Dequeue
-ELSIF pop THEN
+ELSIF trigPop THEN
     head := (head MOD 100) + 1;
     count := count - 1;
 
 // Enqueue
-ELSIF push AND (count < 100) THEN
+ELSIF trigPush AND (count < 100) THEN
     buffer[tail] := itemIn;
     tail := (tail MOD 100) + 1;
     count := count + 1;
