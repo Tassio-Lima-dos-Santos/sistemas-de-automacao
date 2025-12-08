@@ -73,6 +73,9 @@ VAR
 	Timer_balanca : TON := (PT := T#2S); 
 	Timer_esteira : TON := (PT := T#3S);
 	
+	// Delays
+	Delay_E_Cla_2 : TON := (PT := T#1S);
+	
 	// Filas de itens
 	Fila_cla : FB_PRODUCT_QUEUE;
 	Fila_usi : FB_PRODUCT_QUEUE;
@@ -85,7 +88,6 @@ VAR
 	empCNC : FB_MoveTo;
 	
 END_VAR
-
 
 //--------------------------------------------------------------------------------------------
 //-------------------------------TRATAMENTO DE VARIÁVEIS--------------------------------------
@@ -172,25 +174,48 @@ CASE E_Cla OF
 	IF NOT os_cla[E_Cla] THEN
 		os_cla := os_reset;
 		
-		produtoBuffer.processed := FALSE;
-		produtoBuffer.metal := FIO.i_SI;
-		Fila_cla.itemIn := produtoBuffer;
-		Fila_cla.push   := TRUE;
+		FIO.o_E1 := FALSE;
+// 		produtoBuffer.processed := FALSE;
+// 		produtoBuffer.metal := FIO.i_SI;
+// 		Fila_cla.itemIn := produtoBuffer;
+// 		Fila_cla.push   := TRUE;
 		
 		os_cla[E_Cla] := TRUE;
 	END_IF
 	
   	// Ações
 	Timer_sc(IN := FALSE);
-	Timer_op1(IN := TRUE);
-	Fila_cla.push := FALSE;
+	Delay_E_Cla_2(IN := TRUE);
+	// Fila_cla.push := FALSE;
   
 	// Transições de estado
-    IF (NOT(FIO.i_SC) AND FIO.i_DS2) THEN // Se tanto o sensor capacitivo não detectar nada, quanto o sensor optíco 1 detectar, passa pro próximo estado
+    IF Delay_E_Cla_2.Q THEN // Se tanto o sensor capacitivo não detectar nada, quanto o sensor optíco 1 detectar, passa pro próximo estado
 		E_Cla := 3;
+		Delay_E_Cla_2(IN := FALSE);
 	END_IF;
 	
-	3: // Espera estabilizar peso
+	3: // Item segue para a balança
+	// Ação oneshot
+	IF NOT os_cla[E_Cla] THEN
+		os_cla := os_reset;
+		
+		
+		
+		os_cla[E_Cla] := TRUE;
+	END_IF
+	
+  	// Ações
+	Timer_op1(IN := TRUE);
+	FIO.o_E1         := TRUE;
+	FIO.o_E_SP       := TRUE;
+  
+	// Transições de estado
+    IF FIO.i_DS2 THEN // Se o timer 1 der sinal, passa pro próximo estado
+		E_Cla := 4;
+		Timer_op1(IN := FALSE);
+	END_IF;
+	
+	4: // Espera estabilizar peso
 	// Ação oneshot
 	IF NOT os_cla[E_Cla] THEN
 		os_cla := os_reset;
@@ -208,11 +233,11 @@ CASE E_Cla OF
   
 	// Transições de estado
     IF Timer_balanca.Q THEN // Se o timer 1 der sinal, passa pro próximo estado
-		E_Cla := 4;
+		E_Cla := 5;
 		Timer_balanca(IN := FALSE);
 	END_IF;
 	
-	4: // Classificação Caixa ou não caixa
+	5: // Classificação Caixa ou não caixa
 	// Ação oneshot
 	IF NOT os_cla[E_Cla] THEN
 		os_cla := os_reset;
@@ -225,12 +250,12 @@ CASE E_Cla OF
 			FIO.o_C1 := FALSE;
 			contador_classificacao := contador_classificacao + 1;
 			FIO.o_E_SP := TRUE;
-			IF (Fila_cla.itemOut <> 0) THEN
-				Fila_usi.itemIn := Fila_cla.itemOut^;
-				Fila_usi.push := TRUE;
-			END_IF
+// 			IF (Fila_cla.itemOut <> 0) THEN
+// 				Fila_usi.itemIn := Fila_cla.itemOut^;
+// 				Fila_usi.push := TRUE;
+// 			END_IF
 		END_IF
-		Fila_cla.pop := TRUE;
+// 		Fila_cla.pop := TRUE;
 		
 		os_cla[E_Cla] := TRUE;
 	END_IF
@@ -244,7 +269,7 @@ CASE E_Cla OF
 		FIO.o_C1 := FALSE;
 	END_IF;
 	
-  	5: // Estado Emergência
+  	6: // Estado Emergência
 	// Ação oneshot
 	IF NOT os_cla[E_Cla] THEN
 		os_cla := os_reset;
@@ -273,7 +298,7 @@ END_CASE;
 
 // Transições de estado universais
 IF Emergencia1 THEN
-	E_Cla := 5;
+	E_Cla := 6;
 	
 ELSIF NOT(Maquina1) THEN
 	E_Cla := 0;
