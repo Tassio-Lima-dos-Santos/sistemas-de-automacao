@@ -127,7 +127,7 @@ FIO.o_LedStop := NOT(FIO.i_Stop);
 //----------------------------------LÓGICA DOS SENSORES---------------------------------------
 //----------------------------------------INÍCIO----------------------------------------------
 
-IF Maquina1 AND NOT Emergencia1 THEN // Se a máquina 1 estiver operando
+IF Maquina1 AND NOT Emergencia1 AND NOT esperaCla THEN // Se a máquina 1 estiver operando
 	Timer_sc(IN:=NOT FIO.i_SC); // A entrada dos timers será o inverso do sensores
 	Timer_op1(IN:=NOT FIO.i_DS2); // Logo quando os sensores detectarem algo, os timers reiniciam
 ELSE // Caso contrário, os timers permanecem inativos
