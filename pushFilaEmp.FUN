@@ -1,4 +1,4 @@
-FUNCTION pushFilaUsi : BOOL
+FUNCTION pushFilaEmp : BOOL
 VAR_INPUT
 END_VAR
 VAR
