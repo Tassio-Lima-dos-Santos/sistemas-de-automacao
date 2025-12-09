@@ -19,7 +19,7 @@ VAR
     Zconveyor : INT := 1000;
     Xidle : INT := 500;
     Yidle : INT := 500;
-    Zidle : INT := 500;
+    Zidle : INT := 100;
 
 END_VAR
 
