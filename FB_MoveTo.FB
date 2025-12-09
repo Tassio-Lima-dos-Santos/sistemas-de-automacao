@@ -26,21 +26,21 @@ CASE state OF
         END_IF
 
     10: // Move X
-        IF FIO.i_XPOS <> targetX THEN
+        IF (FIO.i_XPOS < targetX - 10) OR (FIO.i_XPOS > targetX + 10) THEN
             FIO.o_X := targetX;
         ELSE
             state := 20;
         END_IF
 
     20: // Move Y
-        IF FIO.i_YPOS <> targetY THEN
+        IF (FIO.i_YPOS < targetY - 10) OR (FIO.i_YPOS > targetY + 10) THEN
             FIO.o_Y := targetY;
         ELSE
             state := 30;
         END_IF
 
     30: // Move Z
-        IF FIO.i_ZPOS <> targetZ THEN
+        IF (FIO.i_ZPOS < targetZ - 10) OR (FIO.i_ZPOS > targetZ + 10) THEN
             FIO.o_Z := targetZ;
         ELSE
             state := 40;
