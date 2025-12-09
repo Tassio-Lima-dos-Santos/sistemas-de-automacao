@@ -95,10 +95,12 @@ VAR
 	// Blocos Funcionais
 	movimentoPistao : empurrarCaixa;
 	empCNC : FB_MoveTo;
- posicionarEstPlas : posicionarEsteiraPlastico;
- posicionarEstMetal : posicionarEsteiraMetal;
- movPlas : moverPlastico;
- movMetal : moverMetal;
+	posicionarEstPlas : posicionarEsteiraPlastico;
+ 	posicionarEstMetal : posicionarEsteiraMetal;
+ 	movPlas : moverPlastico;
+ 	movMetal : moverMetal;
+	reposicionarEstPlas : reposicionarEsteiraPlastico;
+	reposicionarEstMetal : reposicionarEsteiraMetal;
 
 	
 END_VAR
@@ -239,6 +241,8 @@ CASE E_Cla OF
 	END_IF
 	
   	// Ações
+	FIO.o_E1 := TRUE;
+	FIO.o_E_SP := FALSE;
 
 	// Transições de estado
     IF caixa THEN // Se for uma caixa passa para o estado de caixa detectada
@@ -259,6 +263,8 @@ CASE E_Cla OF
 	END_IF
 	
   	// Ações
+	FIO.o_E1 := TRUE;
+	FIO.o_E_SP := FALSE;
 	movimentoPistao(start:=TRUE);
 
 	// Transições de estado
@@ -279,6 +285,7 @@ CASE E_Cla OF
 	END_IF
 	
   	// Ações
+	FIO.o_E1 := TRUE;
 	FIO.o_E_SP := TRUE; // Liga a esteira da balança
 
 	// Transições de estado
@@ -462,8 +469,11 @@ IF (FIO.i_MachiningCenterIsBusy AND OP2) THEN
 	IF trigUsiOcupada.Q THEN
 		E_Cla_anterior := E_Cla;
 	END_IF;
+	trigUsiOcupada(CLK:=FIO.i_MachiningCenterIsBusy AND OP2);
 	FIO.o_E2 := FALSE;
 	esperaCla := TRUE;
+ELSE
+	esperaCla := FALSE;
 END_IF;
 
 //------------------------------------------FINAL---------------------------------------------
@@ -547,7 +557,13 @@ CASE E_Emp OF
 		os_emp[E_Emp] := TRUE;
 	END_IF 
   	// Ações
-FIO.o_E3 := TRUE;
+	FIO.o_E3 := TRUE;
+	FIO.o_EPLASTIC1 := FALSE;
+	FIO.o_EPLASTIC2 := FALSE;
+	FIO.o_EPLASTIC3 := FALSE;
+	FIO.o_EMETAL1 := FALSE;
+	FIO.o_EMETAL2 := FALSE;
+	FIO.o_EMETAL3 := FALSE;
 	
 	// Transições de estado
 IF OP3 THEN
@@ -564,19 +580,25 @@ END_IF;
 		os_emp[E_Emp] := TRUE;
 	END_IF 
   	// Ações
-	 movPlas(start:=TRUE);
+	movPlas(start:=TRUE);
+	FIO.o_EPLASTIC1 := FALSE;
+	FIO.o_EPLASTIC2 := FALSE;
+	FIO.o_EPLASTIC3 := FALSE;
+	FIO.o_EMETAL1 := FALSE;
+	FIO.o_EMETAL2 := FALSE;
+	FIO.o_EMETAL3 := FALSE;
 
 	// Transições de estado
-  IF movPlas.done THEN
-   movPlas.start := FALSE;
-   plastico_counter := plastico_counter + 1;
-   IF plastico_counter < itemPorCaixa THEN
-    E_Emp := 3;
+	IF movPlas.done THEN
+   	movPlas.start := FALSE;
+   	plastico_counter := plastico_counter + 1;
+   		IF plastico_counter < itemPorCaixa THEN
+    		E_Emp := 3;
 
-   ELSE
-    E_Emp := 6;
-   END_IF;
-  END_IF;
+   		ELSE
+    		E_Emp := 6;
+   		END_IF;
+  	END_IF;
 	
   	5: // Mover metal
   	// Ação oneshot
@@ -588,19 +610,25 @@ END_IF;
 		os_emp[E_Emp] := TRUE;
 	END_IF 
 	// Ações
-	 movMetal(start:=TRUE);
+	movMetal(start:=TRUE);
+	FIO.o_EPLASTIC1 := FALSE;
+	FIO.o_EPLASTIC2 := FALSE;
+	FIO.o_EPLASTIC3 := FALSE;
+	FIO.o_EMETAL1 := FALSE;
+	FIO.o_EMETAL2 := FALSE;
+	FIO.o_EMETAL3 := FALSE;
 
 	// Transições de estado
-  IF movMetal.done THEN
-   movMetal.start := FALSE;
-   metal_counter := metal_counter + 1;
-   IF metal_counter < itemPorCaixa THEN
-    E_Emp := 3;
+  	IF movMetal.done THEN
+   		movMetal.start := FALSE;
+   		metal_counter := metal_counter + 1;
+   		IF metal_counter < itemPorCaixa THEN
+    		E_Emp := 3;
 
-   ELSE
-    E_Emp := 7;
-   END_IF;
-  END_IF;
+   		ELSE
+    		E_Emp := 7;
+   		END_IF;
+  	END_IF;
 
   	6: // Mover esteira plástico
   	// Ação oneshot
@@ -612,8 +640,14 @@ END_IF;
 		os_emp[E_Emp] := TRUE;
 	END_IF 
   	// Ações
+	reposicionarEstPlas(start:=TRUE);
   
 	// Transições de estado
+	IF reposicionarEstPlas.done THEN
+		reposicionarEstPlas.start := FALSE;
+		plastico_counter := 0;
+		E_Emp := 3;
+	END_IF;
 	
   	7: // Mover esteira metal
   	// Ação oneshot
@@ -625,15 +659,21 @@ END_IF;
 		os_emp[E_Emp] := TRUE;
 	END_IF 
   	// Ações
+  	reposicionarEstMetal(start:=TRUE);
   
 	// Transições de estado
+	IF reposicionarEstMetal.done THEN
+		reposicionarEstMetal.start := FALSE;
+		metal_counter := 0;
+		E_Emp := 3;
+	END_IF;
 	
   	8: // Estado Emergência
   	// Ação oneshot
 	IF NOT os_emp[E_Emp] THEN
 		os_emp := os_reset;
 		
-		
+		global.Fila_emp(clear:=TRUE);
 		
 		os_emp[E_Emp] := TRUE;
 	END_IF 
@@ -646,7 +686,6 @@ END_IF;
 	FIO.o_EMETAL2 := FALSE;
 	FIO.o_EMETAL3 := FALSE;
 	Delay_E_Emp_5(IN := FALSE);
-	global.Fila_emp.clear     := TRUE;
   
 	// Transições de estado
   
