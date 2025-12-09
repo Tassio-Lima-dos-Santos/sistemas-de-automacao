@@ -268,6 +268,7 @@ CASE E_Cla OF
 		os_cla := os_reset;
 		
 		pushFilaUsi(); // Passa o item que está saindo da fila de classificação para a fila de usinagem
+		contador_classificacao := contador_classificacao + 1; // Aumenta a contagem dos itens que passaram na classificação
 		
 		os_cla[E_Cla] := TRUE;
 	END_IF
@@ -356,7 +357,7 @@ CASE E_Usi OF
 	0: // Estado ocioso 
 	// Ação oneshot
 	IF NOT os_usi[E_Usi] THEN
-		os_cla := os_reset;
+		os_usi := os_reset;
 		
 		global.Fila_usi(clear := TRUE); // Limpa fila
 		global.Fila_usi.clear := FALSE;
@@ -509,7 +510,7 @@ CASE E_Emp OF
 	// Transições de estado
 	IF empCNC.done THEN
 		FIO.o_Succao := TRUE;
-  		IF global.Fila_emp.itemOut .metal THEN // Se o item pego for metal, segue pro estado 3
+  		IF global.Fila_emp.itemOut.metal THEN // Se o item pego for metal, segue pro estado 3
 			E_Emp := 3;
 		ELSE // Se não for, segue pro estado 4
 			E_Emp := 4;
