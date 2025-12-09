@@ -470,11 +470,23 @@ END_IF;
 //----------------------------------------INÍCIO----------------------------------------------
 
 CASE E_Emp OF
-	0: // Estado ocioso 
+	0: // Estado ocioso
+  	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
   	// Ações
 	FIO.o_E3          := FALSE;
-	Esteira_plas      := FALSE;
-	Esteira_metal     := FALSE;
+	FIO.o_EPLASTIC1 := FALSE;
+	FIO.o_EPLASTIC2 := FALSE;
+	FIO.o_EPLASTIC3 := FALSE;
+	FIO.o_EMETAL1 := FALSE;
+	FIO.o_EMETAL2 := FALSE;
+	FIO.o_EMETAL3 := FALSE;
 	Delay_E_Emp_5(IN := FALSE);
 	global.Fila_emp.clear     := TRUE;
   
@@ -484,101 +496,122 @@ CASE E_Emp OF
 		global.Fila_emp.clear := FALSE;
 	END_IF;
 	
-	1: // Liga Esteira
+	1: // Posicionar esteira de plástico
+  	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
 	// Ações
-	FIO.o_E3       := TRUE;
-	Esteira_plas  := FALSE;
-	Esteira_metal := FALSE;
-	Timer_op3(IN := TRUE);
-	// Posicionar na esteira de plástico
-	empCNC(targetX := 0, targetY := 5, targetZ := 5, start := TRUE);
+	posicionarEstPlas(start:=TRUE);
   
 	// Transições de estado
-	IF NOT(Maquina3) THEN // Se a máquina supervisora mandar o sinal de desligar, a máquina de empacotamento volta pro ócio
-		E_Emp := 0;
-  	ELSIF OP3 THEN // Se o sensor optíco 3 detectar a peça, passa para o próximo estado
+	IF posicionarEstPlas.done THEN
 		E_Emp := 2;
 	END_IF;
 	
-	2: // Pegar item
+	2: // Posicionar esteira de metal
+  	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
   	// Ações
-    FIO.o_E3      := FALSE;
-	Timer_op3(IN := FALSE);
-	// Pegar peça
-	empCNC(targetX := 0, targetY := 5, targetZ := 10, start := TRUE);
-  
-	// Transições de estado
-	IF empCNC.done THEN
-		FIO.o_Succao := TRUE;
-  		IF global.Fila_emp.itemOut.metal THEN // Se o item pego for metal, segue pro estado 3
-			E_Emp := 3;
-		ELSE // Se não for, segue pro estado 4
-			E_Emp := 4;
-		END_IF;
-	END_IF;
-	
-	3: // Mover plástico
-  	// Ações
-	// Posicionar na esteira de plástico
-	empCNC(targetX := 3, targetY := 5, targetZ := 10, start := TRUE);
-  	global.Fila_emp.pop := TRUE;
-	
-	// Transições de estado
-	IF empCNC.done THEN
-		FIO.o_Succao := FALSE;
-  		IF (plastico_counter < itemPorCaixa) THEN // Se a máquina supervisora mandar o sinal de ligar, a máquina de empacotamento sai do ócio
-			plastico_counter := plastico_counter + 1;
-			E_Emp := 1;
-			global.Fila_emp.pop := FALSE;
-		ELSE
-			E_Emp := 5;
-			global.Fila_emp.pop := FALSE;
-		END_IF;
-	END_IF;
-	
-	4: // Mover metal
-  	// Ações
-	// Posicionar na esteira de metal
-	empCNC(targetX := 7, targetY := 5, targetZ := 10, start := TRUE);
-  	global.Fila_emp.pop := TRUE;
-	
-	// Transições de estado
-	IF empCNC.done THEN
-		FIO.o_Succao := FALSE;
-  		IF (metal_counter < itemPorCaixa) THEN // Se a máquina supervisora mandar o sinal de ligar, a máquina de empacotamento sai do ócio
-			metal_counter := metal_counter + 1;
-			E_Emp := 1;
-		ELSE
-			E_Emp := 6;
-		END_IF;
-	END_IF;
-	
-  	5: // Mover esteira plástico
-  	// Ações
-	Esteira_plas := TRUE;
-	Delay_E_Emp_5(IN := TRUE);
-  
-	// Transições de estado
-	IF Delay_E_Emp_5.Q THEN
-  		E_Emp := 1;
-	END_IF;
+	posicionarEstMetal(start:=TRUE);
 
-  	6: // Mover esteira metal
-  	// Ações
-	Esteira_metal := TRUE;
-	Delay_E_Emp_5(IN := TRUE);
-  
 	// Transições de estado
-  	IF Delay_E_Emp_5.Q THEN
-  		E_Emp := 1;
+	IF posicionarEstMetal.done THEN
+		E_Emp := 3;
 	END_IF;
 	
-  	7: // Estado Emergência
+	3: // Ligar esteira
+  	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
+  	// Ações
+	
+	// Transições de estado
+	
+	4: // Mover plástico
+  	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
+  	// Ações
+	
+	// Transições de estado
+	
+  	5: // Mover metal
+  	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
+	// Ações
+  
+	// Transições de estado
+
+  	6: // Mover esteira plástico
+  	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
+  	// Ações
+  
+	// Transições de estado
+	
+  	7: // Mover esteira plástico
+  	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
+  	// Ações
+  
+	// Transições de estado
+	
+  	8: // Estado Emergência
+  	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
   	// Ações
 	FIO.o_E3          := FALSE;
-	Esteira_plas      := FALSE;
-	Esteira_metal     := FALSE;
-	Timer_op3(IN     := FALSE);
+	FIO.o_EPLASTIC1 := FALSE;
+	FIO.o_EPLASTIC2 := FALSE;
+	FIO.o_EPLASTIC3 := FALSE;
+	FIO.o_EMETAL1 := FALSE;
+	FIO.o_EMETAL2 := FALSE;
+	FIO.o_EMETAL3 := FALSE;
 	Delay_E_Emp_5(IN := FALSE);
 	global.Fila_emp.clear     := TRUE;
   
@@ -592,11 +625,16 @@ END_CASE;
 
 // Transições de estado universais
 IF Emergencia3 THEN
-	E_Emp := 7;
+	E_Emp := 8;
 	
 ELSIF NOT(Maquina3) THEN
 	E_Emp := 0;
 
+END_IF;
+
+// Ações stateless
+IF OP3 THEN
+	FIO.o_E3 := FALSE; // Desliga a esteira caso algo item seja detectado
 END_IF;
 
 //------------------------------------------FINAL---------------------------------------------
