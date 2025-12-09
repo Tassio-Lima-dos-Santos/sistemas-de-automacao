@@ -95,6 +95,11 @@ VAR
 	// Blocos Funcionais
 	movimentoPistao : empurrarCaixa;
 	empCNC : FB_MoveTo;
+ posicionarEstPlas : posicionarEsteiraPlastico;
+ posicionarEstMetal : posicionarEsteiraMetal;
+ movPlas : moverPlastico;
+ movMetal : moverMetal;
+
 	
 END_VAR
 
@@ -510,6 +515,7 @@ CASE E_Emp OF
   
 	// Transições de estado
 	IF posicionarEstPlas.done THEN
+  posicionarEstPlas.start := FALSE;
 		E_Emp := 2;
 	END_IF;
 	
@@ -527,6 +533,7 @@ CASE E_Emp OF
 
 	// Transições de estado
 	IF posicionarEstMetal.done THEN
+  posicionarEstMetal.start := FALSE;
 		E_Emp := 3;
 	END_IF;
 	
@@ -540,8 +547,12 @@ CASE E_Emp OF
 		os_emp[E_Emp] := TRUE;
 	END_IF 
   	// Ações
+FIO.o_E3 := TRUE;
 	
 	// Transições de estado
+IF OP3 THEN
+  E_Emp := 4;
+END_IF;
 	
 	4: // Mover plástico
   	// Ação oneshot
@@ -553,8 +564,19 @@ CASE E_Emp OF
 		os_emp[E_Emp] := TRUE;
 	END_IF 
   	// Ações
-	
+	 movPlas(start:=TRUE);
+
 	// Transições de estado
+  IF movPlas.done THEN
+   movPlas.start := FALSE;
+   plastico_counter := plastico_counter + 1;
+   IF plastico_counter < itemPorCaixa THEN
+    E_Emp := 3;
+
+   ELSE
+    E_Emp := 6;
+   END_IF;
+  END_IF;
 	
   	5: // Mover metal
   	// Ação oneshot
@@ -566,8 +588,19 @@ CASE E_Emp OF
 		os_emp[E_Emp] := TRUE;
 	END_IF 
 	// Ações
-  
+	 movMetal(start:=TRUE);
+
 	// Transições de estado
+  IF movMetal.done THEN
+   movMetal.start := FALSE;
+   metal_counter := metal_counter + 1;
+   IF metal_counter < itemPorCaixa THEN
+    E_Emp := 3;
+
+   ELSE
+    E_Emp := 7;
+   END_IF;
+  END_IF;
 
   	6: // Mover esteira plástico
   	// Ação oneshot
@@ -582,7 +615,7 @@ CASE E_Emp OF
   
 	// Transições de estado
 	
-  	7: // Mover esteira plástico
+  	7: // Mover esteira metal
   	// Ação oneshot
 	IF NOT os_emp[E_Emp] THEN
 		os_emp := os_reset;
