@@ -7,7 +7,7 @@ VAR_INPUT
 END_VAR
 
 VAR_OUTPUT
-    itemOut : POINTER TO ST_PRODUCT;
+    itemOut : ST_PRODUCT;
     isEmpty : BOOL;
     isFull  : BOOL;
 END_VAR
@@ -28,21 +28,14 @@ trigPush(CLK := push);
 trigPop(CLK := pop);
 trigClear(CLK := clear);
 
-// Empty queue returns null at itemOut
-IF (count = 0) THEN
-    itemOut := 0; // NULL
-
 // Peek
-ELSE
-    itemOut := Adr(buffer[head]);
-END_IF;
+itemOut := buffer[head];
 
 // Clear
 IF trigClear.Q THEN
     head := 1;
     tail := head;
     count := 0;
-    itemOut := 0; // NULL
 
 // Dequeue
 ELSIF trigPop THEN
