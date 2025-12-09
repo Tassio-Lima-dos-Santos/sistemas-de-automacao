@@ -1,0 +1,82 @@
+FUNCTION_BLOCK moverMetal
+VAR_INPUT
+    start   : BOOL;   // pulso de start
+END_VAR
+
+VAR_OUTPUT
+    done : BOOL;      // TRUE quando chegou
+END_VAR
+
+VAR
+    empCNC : FB_MoveTo;
+	trigStart : R_TRIG;
+    state : INT := 0;
+
+    // Coordenadas
+    Xpart : INT := 0;
+    Ypart : INT := 500;
+    Zpart : INT := 850;
+    Xbox : INT := 850;
+    Ybox : INT := 500;
+    Zbox : INT := 800;
+    Xidle : INT := 500;
+    Yidle : INT := 500;
+    Zidle : INT := 500;
+
+END_VAR
+
+trigStart(CLK:=start);
+
+CASE state OF
+
+    0: // Idle
+        IF trigStart.Q THEN
+            state := 10;
+			done := FALSE;
+        END_IF
+
+    10: // Move to part
+        empCNC(targetX := Xpart, targetY := Ypart, targetZ := Zpart, start := TRUE);
+        IF empCNC.done THEN
+            empCNC.start := FALSE;
+            state := 20;
+        END_IF
+
+    20: // Catch part
+        FIO.o_Succao := TRUE;
+        IF FIO.i_SPP THEN
+            state := 30;
+        END_IF
+
+    30: // Move Vertically
+        empCNC(targetX := Xpart, targetY := Ypart, targetZ := Zpart - 50, start := TRUE);
+        IF empCNC.done THEN
+            empCNC.start := FALSE;
+            state := 40;
+        END_IF
+
+    40: // Move to box
+        empCNC(targetX := Xbox, targetY := Ybox, targetZ := Zbox, start := TRUE);
+        IF empCNC.done THEN
+            empCNC.start := FALSE;
+            state := 50;
+        END_IF
+
+    50: // Drop part off
+        FIO.o_Succao := FALSE;
+        IF NOT FIO.i_SPP THEN
+            state := 60;
+        END_IF
+
+    60: // Return to idle position
+        empCNC(targetX := Xidle, targetY := Yidle, targetZ := Zidle, start := TRUE);
+        IF empCNC.done THEN
+            empCNC.start := FALSE;
+            state := 70;
+        END_IF
+
+    70: // Finalizado
+        done := TRUE;
+		state := 0;
+
+END_CASE

@@ -1,0 +1,73 @@
+FUNCTION_BLOCK posicionarEsteiraMetal
+VAR_INPUT
+    start   : BOOL;  // pulso de start
+END_VAR
+
+VAR_OUTPUT
+    done : BOOL;      // TRUE quando chegou
+END_VAR
+
+VAR
+    empCNC : FB_MoveTo;
+	trigStart : R_TRIG;
+	trigSensor : R_TRIG;
+    state : INT := 0;
+
+    // Coordenadas
+    Xconveyor : INT := 1000;
+    Yconveyor : INT := 600;
+    Zconveyor : INT := 1000;
+    Xidle : INT := 500;
+    Yidle : INT := 500;
+    Zidle : INT := 500;
+
+END_VAR
+
+trigStart(CLK:=start);
+
+CASE state OF
+
+    0: // Idle
+        IF trigStart.Q THEN
+            state := 10;
+			done := FALSE;
+        END_IF
+
+    10: // Move to conveyor position
+        empCNC(targetX := Xconveyor, targetY := Yconveyor, targetZ := Zconveyor, start := TRUE);
+        IF empCNC.done THEN
+            empCNC.start := FALSE;
+            state := 20;
+        END_IF
+
+    20: // Turn on conveyor
+        FIO.o_EMETAL1 := TRUE;
+        FIO.o_EMETAL2 := TRUE;
+        FIO.o_EMETAL3 := TRUE;
+        state := 30;
+
+
+    30: // Wait for trigger
+        trigSensor(CLK:=FIO.i_SPP);
+        IF trigSensor.Q THEN
+            state := 40;
+        END_IF
+
+    40: // Turn off conveyor
+        FIO.o_EMETAL1 := FALSE;
+        FIO.o_EMETAL2 := FALSE;
+        FIO.o_EMETAL3 := FALSE;
+        state := 50;
+
+    50: // Return to idle position
+        empCNC(targetX := Xidle, targetY := Yidle, targetZ := Zidle, start := TRUE);
+        IF empCNC.done THEN
+            empCNC.start := FALSE;
+            state := 60;
+        END_IF
+
+    60: // Finalizado
+        done := TRUE;
+		state := 0;
+
+END_CASE
