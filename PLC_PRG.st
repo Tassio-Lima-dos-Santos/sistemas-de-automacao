@@ -2,9 +2,13 @@ PROGRAM PLC_PRG
 VAR
     // Estados das máquinas
     E_Cla : INT := 0;      // Classificadora
+	E_Cla_anterior : INT := 0; // Guarda o estado da máquina classificadora antes da espera
     E_Usi : INT := 0;      // Usinagem
     E_Emp : INT := 0;      // Empacotamento
     E_Sup : INT := 0;      // Supervisora
+
+	// Codições de mudança de estado
+	classificacaoConcluida : BOOL;
 	
 	// Oneshot das máquinas
 	os_cla : ARRAY[0..50] OF BOOL; // Classificação
@@ -25,11 +29,13 @@ VAR
     Emergencia2 : BOOL := FALSE;
     Emergencia3 : BOOL := FALSE;
     
-
     // Comandos da máquina supervisora
     Maquina1 : BOOL := FALSE;   // Liga classificadora
     Maquina2 : BOOL := FALSE;   // Liga usinagem
     Maquina3 : BOOL := FALSE;   // Liga empacotamento
+
+	// Comunicação entre máquinas
+	esperaCla : BOOL := FALSE;  // Sinal que faz a máquina classificadora entrar em espera
 
     // Sensores
     SC  : BOOL := FALSE;    // Sensor capacitivo
@@ -65,26 +71,29 @@ VAR
 	Esteira_metal : BOOL := FALSE;
 	Pistao1  	  : BOOL := FALSE;
 	
-	// Timers
+	// Timers dos sensores
 	Timer_sc  	  : TON := (PT := T#30S);
 	Timer_op1 	  : TON := (PT := T#30S);
 	Timer_op2     : TON := (PT := T#30S);
 	Timer_op3     : TON := (PT := T#30S);
-	Timer_balanca : TON := (PT := T#2S); 
-	Timer_esteira : TON := (PT := T#3S);
 	
 	// Delays
-	Delay_E_Cla_2 : TON := (PT := T#1S);
+	Delay_Cla_metal : TP := (PT := T#1S); // Delay da classificação metal
+	delayEstabilizarBalanca : TON := (PT := T#2S); // Delay da balança
+	Delay_E_Cla_5 : TON := (PT := T#5S); // Delay para considerar classificação concluída
+	Delay_E_Emp_5 : TON := (PT := T#3S); // Delay para movimentar as esteiras de plástico e metal
 	
-	// Filas de itens
-	Fila_cla : FB_PRODUCT_QUEUE;
-	Fila_usi : FB_PRODUCT_QUEUE;
-	Fila_emp : FB_PRODUCT_QUEUE;
+	// Triggers
+	trigSC : R_TRIG;
+	trigDelayMetal : F_TRIG;
+	trigUsiConcluida : F_TRIG;
+	trigUsiOcupada : R_TRIG;
 	
 	// Buffer de produto
 	produtoBuffer : ST_PRODUCT;
 	
 	// Blocos Funcionais
+	movimentoPistao : empurrarCaixa;
 	empCNC : FB_MoveTo;
 	
 END_VAR
@@ -108,10 +117,41 @@ FIO.o_LedSPMenos := FIO.i_SPMenos;
 FIO.o_LedStart := FIO.i_Start;
 FIO.o_LedStop := NOT(FIO.i_Stop);
 
-
 //------------------------------------------FINAL---------------------------------------------
 //-------------------------------TRATAMENTO DE VARIÁVEIS--------------------------------------
 //--------------------------------------------------------------------------------------------
+
+
+
+//--------------------------------------------------------------------------------------------
+//----------------------------------LÓGICA DOS SENSORES---------------------------------------
+//----------------------------------------INÍCIO----------------------------------------------
+
+IF Maquina1 AND NOT Emergencia1 THEN // Se a máquina 1 estiver operando
+	Timer_sc(IN:=NOT FIO.i_SC); // A entrada dos timers será o inverso do sensores
+	Timer_op1(IN:=NOT FIO.i_DS2); // Logo quando os sensores detectarem algo, os timers reiniciam
+ELSE // Caso contrário, os timers permanecem inativos
+	Timer_sc(IN:=FALSE);
+	Timer_op1(IN:=FALSE);
+END_IF;
+
+IF Maquina2 AND NOT Emergencia2 THEN // Se a máquina 2 estiver operando
+	Timer_op2(IN:=NOT OP2); // Timer perma
+ELSE // Caso contrário, os timers permanecem inativos
+	Timer_op2(IN:=FALSE);
+END_IF;
+
+IF Maquina3 AND NOT Emergencia3 THEN // Se a máquina 3 estiver operando
+	Timer_op3(IN:=NOT OP3);
+ELSE // Caso contrário, os timers permanecem inativos
+	Timer_op3(IN:=FALSE);
+END_IF;
+
+//------------------------------------------FINAL---------------------------------------------
+//----------------------------------LÓGICA DOS SENSORES---------------------------------------
+//--------------------------------------------------------------------------------------------
+
+
 
 //--------------------------------------------------------------------------------------------
 //----------------------------------MÁQUINAS DE ESTADO----------------------------------------
@@ -128,25 +168,21 @@ CASE E_Cla OF
 	IF NOT os_cla[E_Cla] THEN
 		os_cla := os_reset;
 		
-		
+		delayEstabilizarBalanca(IN := FALSE); // Reinicia o timer de delay da balança
+		global.Fila_cla(clear := TRUE); // Limpa fila de dados
+		global.Fila_cla.clear := FALSE;
 		
 		os_cla[E_Cla] := TRUE;
 	END_IF
 	
     // Ações
-	FIO.o_E1          := FALSE;
-	FIO.o_E_SP          := FALSE;
-	FIO.o_C1           := FALSE;
-	Timer_sc     (IN := FALSE);
-	Timer_op1    (IN := FALSE);
-	Timer_balanca(IN := FALSE);
-	Fila_cla.clear    :=  TRUE;
+	FIO.o_E1          := FALSE; // Esteira 1 parada
+	FIO.o_E_SP        := FALSE; // Esteira 2 parada
+	FIO.o_C1          := FALSE; // Pistão retraído
   
 	// Transições de estado
   	IF Maquina1 THEN // Se receber o sinal Maquina1, a máquina classificadora sai do ócio
 		E_Cla := 1;
-		Fila_cla.clear := FALSE;
-		os_cla[E_Cla] := FALSE;
 	END_IF;
 	
 	1: // Liga Esteira
@@ -154,119 +190,94 @@ CASE E_Cla OF
 	IF NOT os_cla[E_Cla] THEN
 		os_cla := os_reset;
 		
-		
-		
 		os_cla[E_Cla] := TRUE;
 	END_IF
 	
 	// Ações
-	FIO.o_E1    := TRUE;
-	FIO.o_E_SP  := TRUE;
-	Timer_sc(IN := TRUE);
+	FIO.o_E1    := TRUE; // Deixa a esteira 1 ligada
+	FIO.o_E_SP  := TRUE; // Deixa a esteira 2 ligada
   
 	// Transições de estado
-    IF FIO.i_SC THEN // Se o sensor capacitivo detectar algo, muda para o estado de classificação de metal
+    IF FIO.i_DS2 THEN // Se o sensor óptico 1 detectar algo, vai para o estado de estabilizar o peso
 		E_Cla := 2;
 	END_IF;
 	
-	2: // Classificação Metal ou não Metal
+	2: // Espera estabilizar peso
 	// Ação oneshot
 	IF NOT os_cla[E_Cla] THEN
 		os_cla := os_reset;
 		
-		FIO.o_E1 := FALSE;
-// 		produtoBuffer.processed := FALSE;
-// 		produtoBuffer.metal := FIO.i_SI;
-// 		Fila_cla.itemIn := produtoBuffer;
-// 		Fila_cla.push   := TRUE;
+		
 		
 		os_cla[E_Cla] := TRUE;
 	END_IF
 	
   	// Ações
-	Timer_sc(IN := FALSE);
-	Delay_E_Cla_2(IN := TRUE);
-	// Fila_cla.push := FALSE;
-  
+	delayEstabilizarBalanca(IN := TRUE); // Delay para estabilizar a balança
+	FIO.o_E1         := FALSE; // Para a esteira 1
+	FIO.o_E_SP       := FALSE; // Para a esteira 2
+
 	// Transições de estado
-    IF Delay_E_Cla_2.Q THEN // Se tanto o sensor capacitivo não detectar nada, quanto o sensor optíco 1 detectar, passa pro próximo estado
+    IF delayEstabilizarBalanca.Q THEN // Se o timer 1 der sinal, passa pro próximo estado
 		E_Cla := 3;
-		Delay_E_Cla_2(IN := FALSE);
+		delayEstabilizarBalanca(IN := FALSE);
 	END_IF;
 	
-	3: // Item segue para a balança
+	3: // Classificação Caixa ou não caixa
 	// Ação oneshot
 	IF NOT os_cla[E_Cla] THEN
 		os_cla := os_reset;
 		
-		
+		caixa := (FIO.i_SP < 300);
 		
 		os_cla[E_Cla] := TRUE;
 	END_IF
 	
   	// Ações
-	Timer_op1(IN := TRUE);
-	FIO.o_E1         := TRUE;
-	FIO.o_E_SP       := TRUE;
-  
+
 	// Transições de estado
-    IF FIO.i_DS2 THEN // Se o timer 1 der sinal, passa pro próximo estado
+    IF caixa THEN // Se for uma caixa passa para o estado de caixa detectada
 		E_Cla := 4;
-		Timer_op1(IN := FALSE);
-	END_IF;
-	
-	4: // Espera estabilizar peso
-	// Ação oneshot
-	IF NOT os_cla[E_Cla] THEN
-		os_cla := os_reset;
-		
-		
-		
-		os_cla[E_Cla] := TRUE;
-	END_IF
-	
-  	// Ações
-	Timer_op1.IN     := FALSE;
-	FIO.o_E1         := FALSE;
-	FIO.o_E_SP         := FALSE;
-	Timer_balanca(IN := TRUE);
-  
-	// Transições de estado
-    IF Timer_balanca.Q THEN // Se o timer 1 der sinal, passa pro próximo estado
+	ELSE // Se não for, passa para o estado de caixa não detectada
 		E_Cla := 5;
-		Timer_balanca(IN := FALSE);
 	END_IF;
-	
-	5: // Classificação Caixa ou não caixa
+
+	4: // Caixa detectada
 	// Ação oneshot
 	IF NOT os_cla[E_Cla] THEN
 		os_cla := os_reset;
 		
-		caixa := (FIO.i_SP > 3);
-		// Se o peso for menor que 3 é uma caixa
-		IF caixa THEN
-			FIO.o_C1 := TRUE;
-		ELSE
-			FIO.o_C1 := FALSE;
-			contador_classificacao := contador_classificacao + 1;
-			FIO.o_E_SP := TRUE;
-// 			IF (Fila_cla.itemOut <> 0) THEN
-// 				Fila_usi.itemIn := Fila_cla.itemOut^;
-// 				Fila_usi.push := TRUE;
-// 			END_IF
-		END_IF
-// 		Fila_cla.pop := TRUE;
+		global.Fila_cla(pop := TRUE);
+		global.Fila_cla.pop := FALSE;
 		
 		os_cla[E_Cla] := TRUE;
 	END_IF
 	
   	// Ações
-	Fila_usi.push := FALSE;
-  
+	movimentoPistao(start:=TRUE);
+
 	// Transições de estado
-    IF (NOT(FIO.i_DS2)) THEN // Se o sensor optíco 1 não detectar nada, volta ao início da operação
+    IF movimentoPistao.done THEN
 		E_Cla := 1;
-		FIO.o_C1 := FALSE;
+		movimentoPistao(start:=FALSE);
+	END_IF;
+
+	5: // Caixa não detectada
+	// Ação oneshot
+	IF NOT os_cla[E_Cla] THEN
+		os_cla := os_reset;
+		
+		pushFilaUsi(); // Passa o item que está saindo da fila de classificação para a fila de usinagem
+		
+		os_cla[E_Cla] := TRUE;
+	END_IF
+	
+  	// Ações
+	FIO.o_E_SP := TRUE; // Liga a esteira da balança
+
+	// Transições de estado
+    IF NOT FIO.i_DS2 THEN // Se não detectar mais com o sensor óptico, volta ao início
+		E_Cla := 1;
 	END_IF;
 	
   	6: // Estado Emergência
@@ -283,13 +294,30 @@ CASE E_Cla OF
 	FIO.o_E1          := FALSE;
 	FIO.o_E_SP          := FALSE;
 	FIO.o_C1           := FALSE;
-	Timer_sc     (IN := FALSE);
-	Timer_op1    (IN := FALSE);
-	Timer_balanca(IN := FALSE);
-	Fila_cla.clear    :=  TRUE;
+	Delay_E_Cla_4(IN := FALSE);
+	global.Fila_cla.clear    :=  TRUE;
   
 	// Transições de estado
   
+	7: // Espera
+	// Ação oneshot
+	IF NOT os_cla[E_Cla] THEN
+		os_cla := os_reset;
+		
+		
+		
+		os_cla[E_Cla] := TRUE;
+	END_IF
+	
+  	// Ações
+	FIO.o_E1          := FALSE;
+	FIO.o_E_SP        := FALSE;
+	Delay_E_Cla_4(IN := FALSE);
+  
+	// Transições de estado
+	IF NOT esperaCla THEN
+		E_Cla := E_Cla_anterior;
+	END_IF;
 	
 	ELSE // Caso a máquina não esteja em nenhum estado válido, ela retorna ao estado ocioso 
 		E_Cla := 0;
@@ -303,7 +331,19 @@ IF Emergencia1 THEN
 ELSIF NOT(Maquina1) THEN
 	E_Cla := 0;
 
+ELSIF esperaCla THEN
+	E_Cla := 7;
+
 END_IF;
+
+// Ações Stateless
+
+// Se der um rising no sensor capacitivo, ele registra na fila
+trigSC(CLK := FIO.i_SC);
+IF trigSC.Q THEN
+	registrarItem();
+END_IF;
+
 //------------------------------------------FINAL---------------------------------------------
 //----------------------------------MÁQUINA CLASSIFICADORA------------------------------------
 
@@ -314,54 +354,82 @@ END_IF;
 
 CASE E_Usi OF
 	0: // Estado ocioso 
+	// Ação oneshot
+	IF NOT os_usi[E_Usi] THEN
+		os_cla := os_reset;
+		
+		global.Fila_usi(clear := TRUE); // Limpa fila
+		global.Fila_usi.clear := FALSE;
+		
+		os_usi[E_Usi] := TRUE;
+	END_IF
+	
   	// Ações
-	FIO.o_E2     := FALSE;
-	Timer_op2(IN := FALSE);
-	FIO.o_RB1_Stop := TRUE;
-	Fila_usi.clear := TRUE;
+	FIO.o_E2     := FALSE; // Esteira 2 desligada
+	FIO.o_RB1_Reset := TRUE; // Reseta o robô
+	FIO.o_RB1_Stop := FALSE;
   
 	// Transições de estado
     IF Maquina2 THEN // Se a máquina supervisora mandar o sinal de ligar, a máquina de usinagem sai do ócio
 		E_Usi := 1;
-		FIO.o_RB1_Stop := FALSE;
-		Fila_usi.clear := FALSE;
+		FIO.o_RB1_Reset := FALSE;
 	END_IF;
 	
 	1: // Liga Esteira
-	// Ações
-	FIO.o_E2     := TRUE;
-	Timer_op2(IN := TRUE);
+	// Ação oneshot
+	IF NOT os_usi[E_Usi] THEN
+		os_cla := os_reset;
+		
+		
+		
+		os_cla[E_Cla] := TRUE;
+	END_IF
+	
+  	// Ações
+	FIO.o_E2 := TRUE; // Liga a esteira
   
 	// Transições de estado
-	IF NOT(Maquina2) THEN // Se a máquina supervisora mandar o sinal de desligar, a máquina de usinagem volta pro ócio
-		E_Usi := 0;
-    ELSIF OP2 THEN // Se o sensor optíco 2 detectar a peça, passa para o próximo estado
+    IF OP2 THEN // Se o sensor optíco 2 detectar a peça, passa para o próximo estado
 		E_Usi := 2;
 	END_IF;
 	
 	2: // Usinagem
+  	// Ação oneshot
+	IF NOT os_usi[E_Usi] THEN
+		os_usi := os_reset;
+		
+		
+		
+		os_usi[E_Usi] := TRUE;
+	END_IF
+	
   	// Ações
-	Timer_op2(IN := FALSE);
-	FIO.o_MachiningCenterProduceLids := NOT(Fila_usi.itemOut^.metal);
-	FIO.o_RB1_Start := TRUE;
+	// Se o item for metal, ele recebe o design fundo, se for plástico recebe o design de lids
+	FIO.o_MachiningCenterProduceLids := NOT(global.Fila_usi.itemOut.metal);
+	FIO.o_RB1_Start := TRUE; // Inicia 
   
 	// Transições de estado
-  	IF NOT(FIO.i_MachiningCenterIsBusy) THEN // Se o movimento 1 do braço robótico for concluído, passa pro próximo estado
-		E_Usi := 1;
-		contador_usinagem := contador_usinagem + 1;
-		IF (Fila_usi.itemOut <> 0) THEN
-			Fila_emp.itemIn := Fila_usi.itemOut^;
-			Fila_emp.push := TRUE;
-			Fila_cla.pop := TRUE;
-		END_IF
+	trigUsiConcluida(CLK:=FIO.i_MachiningCenterIsBusy);
+  	IF trigUsiConcluida.Q THEN // Se o movimento 1 do braço robótico for concluído, passa pro próximo estado
+		E_Usi := 1; // Volta pro estado 1
+		contador_usinagem := contador_usinagem + 1; // Aumenta em um o números de coisas usinadas
+		pushFilaEmp();
 	END_IF;
 	
   	3: // Estado Emergência
+  	// Ação oneshot
+	IF NOT os_usi[E_Usi] THEN
+		os_usi := os_reset;
+		
+		global.Fila_usi(clear := TRUE); // Limpa a fila
+		global.Fila_usiclear := FALSE;
+		
+		os_usi[E_Usi] := TRUE;
+	END_IF
+	
   	// Ações
-	FIO.o_E2     := FALSE;
-	Timer_op2(IN := FALSE);
-	FIO.o_RB1_Stop := TRUE;
-	Fila_usi.clear := TRUE;
+	FIO.o_E2     := FALSE; // Desliga a esteira
+	FIO.o_RB1_Stop := TRUE; // Para o robô
   
 	// Transições de estado
   
@@ -380,6 +448,18 @@ ELSIF NOT(Maquina2) THEN
 
 END_IF;
 
+// Ações Stateless
+
+// Se a máquina de usinagem estiver ocupada e tiver item chegando ela faz as esteiras pararem
+trigUsiOcupada(CLK:=FIO.i_MachiningCenterIsBusy AND OP2);
+IF (FIO.i_MachiningCenterIsBusy AND OP2) THEN
+	IF trigUsiOcupada.Q THEN
+		E_Cla_anterior := E_Cla
+	END_IF;
+	FIO.o_E2 := FALSE;
+	esperaCla := TRUE;
+END_IF;
+
 //------------------------------------------FINAL---------------------------------------------
 //------------------------------------MÁQUINA USINAGEM----------------------------------------
 
@@ -394,14 +474,13 @@ CASE E_Emp OF
 	FIO.o_E3          := FALSE;
 	Esteira_plas      := FALSE;
 	Esteira_metal     := FALSE;
-	Timer_op3(IN     := FALSE);
-	Timer_esteira(IN := FALSE);
-	Fila_emp.clear     := TRUE;
+	Delay_E_Emp_5(IN := FALSE);
+	global.Fila_emp.clear     := TRUE;
   
 	// Transições de estado
   	IF Maquina3 THEN // Se a máquina supervisora mandar o sinal de ligar, a máquina de empacotamento sai do ócio
 		E_Emp := 1;
-		Fila_emp.clear := FALSE;
+		global.Fila_emp.clear := FALSE;
 	END_IF;
 	
 	1: // Liga Esteira
@@ -430,8 +509,8 @@ CASE E_Emp OF
 	// Transições de estado
 	IF empCNC.done THEN
 		FIO.o_Succao := TRUE;
-		IF (Fila_emp.itemOut <> 0) THEN
-  			IF Fila_emp.itemOut^.metal THEN // Se o item pego for metal, segue pro estado 3
+		IF (global.Fila_emp.itemOut <> 0) THEN
+  			IF global.Fila_emp.itemOut .metal THEN // Se o item pego for metal, segue pro estado 3
 				E_Emp := 3;
 			ELSE // Se não for, segue pro estado 4
 				E_Emp := 4;
@@ -443,7 +522,7 @@ CASE E_Emp OF
   	// Ações
 	// Posicionar na esteira de plástico
 	empCNC(targetX := 3, targetY := 5, targetZ := 10, start := TRUE);
-  	Fila_emp.pop := TRUE;
+  	global.Fila_emp.pop := TRUE;
 	
 	// Transições de estado
 	IF empCNC.done THEN
@@ -451,10 +530,10 @@ CASE E_Emp OF
   		IF (plastico_counter < itemPorCaixa) THEN // Se a máquina supervisora mandar o sinal de ligar, a máquina de empacotamento sai do ócio
 			plastico_counter := plastico_counter + 1;
 			E_Emp := 1;
-			Fila_emp.pop := FALSE;
+			global.Fila_emp.pop := FALSE;
 		ELSE
 			E_Emp := 5;
-			Fila_emp.pop := FALSE;
+			global.Fila_emp.pop := FALSE;
 		END_IF;
 	END_IF;
 	
@@ -462,7 +541,7 @@ CASE E_Emp OF
   	// Ações
 	// Posicionar na esteira de metal
 	empCNC(targetX := 7, targetY := 5, targetZ := 10, start := TRUE);
-  	Fila_emp.pop := TRUE;
+  	global.Fila_emp.pop := TRUE;
 	
 	// Transições de estado
 	IF empCNC.done THEN
@@ -478,20 +557,20 @@ CASE E_Emp OF
   	5: // Mover esteira plástico
   	// Ações
 	Esteira_plas := TRUE;
-	Timer_esteira(IN := TRUE);
+	Delay_E_Emp_5(IN := TRUE);
   
 	// Transições de estado
-	IF Timer_esteira.Q THEN
+	IF Delay_E_Emp_5.Q THEN
   		E_Emp := 1;
 	END_IF;
 
   	6: // Mover esteira metal
   	// Ações
 	Esteira_metal := TRUE;
-	Timer_esteira(IN := TRUE);
+	Delay_E_Emp_5(IN := TRUE);
   
 	// Transições de estado
-  	IF Timer_esteira.Q THEN
+  	IF Delay_E_Emp_5.Q THEN
   		E_Emp := 1;
 	END_IF;
 	
@@ -501,8 +580,8 @@ CASE E_Emp OF
 	Esteira_plas      := FALSE;
 	Esteira_metal     := FALSE;
 	Timer_op3(IN     := FALSE);
-	Timer_esteira(IN := FALSE);
-	Fila_emp.clear     := TRUE;
+	Delay_E_Emp_5(IN := FALSE);
+	global.Fila_emp.clear     := TRUE;
   
 	// Transições de estado
   
