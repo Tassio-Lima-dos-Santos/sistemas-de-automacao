@@ -8,7 +8,11 @@ VAR_OUTPUT
 END_VAR
 
 VAR
-    empCNC : FB_MoveTo;
+    empCNC1 : FB_MoveTo;
+	empCNC2 : FB_MoveTo;
+	empCNC3 : FB_MoveTo;
+	empCNC4 : FB_MoveTo;
+	empCNC5 : FB_MoveTo;
 	trigStart : R_TRIG;
     state : INT := 0;
 
@@ -21,7 +25,7 @@ VAR
     Zbox : INT := 800;
     Xidle : INT := 500;
     Yidle : INT := 500;
-    Zidle : INT := 100;
+    Zidle : INT := 50;
 
 END_VAR
 
@@ -31,14 +35,21 @@ CASE state OF
 
     0: // Idle
         IF trigStart.Q THEN
-            state := 10;
+            state := 5;
 			done := FALSE;
+        END_IF
+		
+	5: // Return to idle position
+        empCNC1(targetX := Xidle, targetY := Yidle, targetZ := Zidle, start := TRUE);
+        IF empCNC1.done THEN
+            empCNC1.start := FALSE;
+            state := 10;
         END_IF
 
     10: // Move to part
-        empCNC(targetX := Xpart, targetY := Ypart, targetZ := Zpart, start := TRUE);
-        IF empCNC.done THEN
-            empCNC.start := FALSE;
+        empCNC2(targetX := Xpart, targetY := Ypart, targetZ := Zpart, start := TRUE);
+        IF empCNC2.done THEN
+            empCNC2.start := FALSE;
             state := 20;
         END_IF
 
@@ -49,16 +60,16 @@ CASE state OF
         END_IF
 
     30: // Move Vertically
-        empCNC(targetX := Xpart, targetY := Ypart, targetZ := Zpart - 50, start := TRUE);
-        IF empCNC.done THEN
-            empCNC.start := FALSE;
+        empCNC3(targetX := Xpart, targetY := Ypart, targetZ := Zpart - 50, start := TRUE);
+        IF empCNC3.done THEN
+            empCNC3.start := FALSE;
             state := 40;
         END_IF
 
     40: // Move to box
-        empCNC(targetX := Xbox, targetY := Ybox, targetZ := Zbox, start := TRUE);
-        IF empCNC.done THEN
-            empCNC.start := FALSE;
+        empCNC4(targetX := Xbox, targetY := Ybox, targetZ := Zbox, start := TRUE);
+        IF empCNC4.done THEN
+            empCNC4.start := FALSE;
             state := 50;
         END_IF
 
@@ -69,9 +80,9 @@ CASE state OF
         END_IF
 
     60: // Return to idle position
-        empCNC(targetX := Xidle, targetY := Yidle, targetZ := Zidle, start := TRUE);
-        IF empCNC.done THEN
-            empCNC.start := FALSE;
+        empCNC5(targetX := Xidle, targetY := Yidle, targetZ := Zidle, start := TRUE);
+        IF empCNC5.done THEN
+            empCNC5.start := FALSE;
             state := 70;
         END_IF
 
