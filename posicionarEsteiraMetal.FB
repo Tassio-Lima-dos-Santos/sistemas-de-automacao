@@ -8,8 +8,7 @@ VAR_OUTPUT
 END_VAR
 
 VAR
-    empCNC1 : FB_MoveTo;
-	empCNC2 : FB_MoveTo;
+    empCNC : FB_MoveTo;
 	trigStart : R_TRIG;
 	trigSensor : R_TRIG;
     state : INT := 0;
@@ -35,9 +34,9 @@ CASE state OF
         END_IF
 
     10: // Move to conveyor position
-        empCNC1(targetX := Xconveyor, targetY := Yconveyor, targetZ := Zconveyor, start := TRUE);
-        IF empCNC1.done THEN
-            empCNC1.start := FALSE;
+        empCNC(targetX := Xconveyor, targetY := Yconveyor, targetZ := Zconveyor, start := TRUE);
+        IF empCNC.done THEN
+            empCNC(start := FALSE);
             state := 20;
         END_IF
 
@@ -61,9 +60,9 @@ CASE state OF
         state := 50;
 
     50: // Return to idle position
-        empCNC2(targetX := Xidle, targetY := Yidle, targetZ := Zidle, start := TRUE);
-        IF empCNC2.done THEN
-            empCNC2.start := FALSE;
+        empCNC(targetX := Xidle, targetY := Yidle, targetZ := Zidle, start := TRUE);
+        IF empCNC.done THEN
+            empCNC(start := FALSE);
             state := 60;
         END_IF
 

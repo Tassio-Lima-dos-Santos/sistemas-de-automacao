@@ -1,0 +1,47 @@
+FUNCTION_BLOCK pushFilaEmp : BOOL
+
+VAR_INPUT
+    start   : BOOL;   // pulso de start
+END_VAR
+
+VAR_OUTPUT
+    done : BOOL;      // TRUE quando chegou
+END_VAR
+
+VAR
+	trigStart : R_TRIG;
+    state : INT := 0;
+    popTimer : TON := (PT := T#0.5S);
+
+END_VAR
+
+trigStart(CLK:=start);
+
+CASE state OF
+
+    0: // Idle
+        IF trigStart.Q THEN
+            state := 10;
+			done := FALSE;
+        END_IF
+
+    10: // Push item into emp queue
+        global.Fila_emp(push := TRUE, itemIn := global.Fila_usi.itemOut);
+        IF (global.Fila_emp.itemOut = global.Fila_usi.itemOut) THEN
+            global.Fila_emp(push := FALSE);
+            state := 20;
+        END_IF
+
+    20: // Push item from usi queue
+        global.Fila_usi(pop := TRUE);
+        popTimer(IN := TRUE);
+        IF popTimer.Q THEN
+            popTimer(IN := FALSE);
+            state := 30;
+        END_IF
+
+    30: // Finalizado
+        done := TRUE;
+		state := 0;
+
+END_CASE
