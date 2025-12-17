@@ -1,4 +1,4 @@
-FUNCTION_BLOCK pushFilaEmp : BOOL
+FUNCTION_BLOCK pushFilaEmp
 
 VAR_INPUT
     start   : BOOL;   // pulso de start
@@ -27,7 +27,7 @@ CASE state OF
 
     10: // Push item into emp queue
         global.Fila_emp(push := TRUE, itemIn := global.Fila_usi.itemOut);
-        IF (global.Fila_emp.itemOut = global.Fila_usi.itemOut) THEN
+        IF (global.Fila_emp.itemOut.metal = global.Fila_usi.itemOut.metal) THEN
             global.Fila_emp(push := FALSE);
             state := 20;
         END_IF
