@@ -1,4 +1,4 @@
-FUNCTION_BLOCK pushFilaUsi : BOOL
+FUNCTION_BLOCK pushFilaUsi
 
 VAR_INPUT
     start   : BOOL;   // pulso de start
@@ -27,7 +27,7 @@ CASE state OF
 
     10: // Push item into usi queue
         global.Fila_usi(push := TRUE, itemIn := global.Fila_cla.itemOut);
-        IF (global.Fila_usi.itemOut = global.Fila_cla.itemOut) THEN
+        IF (global.Fila_usi.itemOut.metal = global.Fila_cla.itemOut.metal) THEN
             global.Fila_usi(push := FALSE);
             state := 20;
         END_IF
