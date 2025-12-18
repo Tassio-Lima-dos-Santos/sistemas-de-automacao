@@ -1,0 +1,26 @@
+VAR_GLOBAL CONSTANT
+    Xidle : INT := 500;
+    Yidle : INT := 500;
+    Zidle : INT := 200;
+
+    XconveyorPlas : INT := 470;
+    YconveyorPlas : INT := 600;
+    ZconveyorPlas : INT := 1000;
+
+    XconveyorMetal : INT := 1000;
+    YconveyorMetal : INT := 600;
+    ZconveyorMetal : INT := 1000;
+
+    Xpart : INT := 110;
+    Ypart : INT := 500;
+    Zpart : INT := 830;
+
+    XboxMetal : INT := 850;
+    YboxMetal : INT := 500;
+    ZboxMetal : INT := 800;
+
+    XboxPlas : INT := 330;
+    YboxPlas : INT := 500;
+    ZboxPlas : INT := 800;
+
+END_VAR
