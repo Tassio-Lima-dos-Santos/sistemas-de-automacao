@@ -12,17 +12,6 @@ VAR
 	trigStart : R_TRIG;
     state : INT := 0;
 
-    // Coordenadas
-    Xpart : INT := 110;
-    Ypart : INT := 500;
-    Zpart : INT := 830;
-    Xbox : INT := 850;
-    Ybox : INT := 500;
-    Zbox : INT := 800;
-    Xidle : INT := 500;
-    Yidle : INT := 500;
-    Zidle : INT := 50;
-
 END_VAR
 
 trigStart(CLK:=start);
@@ -36,7 +25,7 @@ CASE state OF
         END_IF
 
     10: // Move to part
-        empCNC(targetX := Xpart, targetY := Ypart, targetZ := Zpart, start := TRUE);
+        empCNC(targetX := constante.Xpart, targetY := constante.Ypart, targetZ := constante.Zpart, start := TRUE);
         IF empCNC.done THEN
             empCNC(start := FALSE);
             state := 20;
@@ -49,14 +38,14 @@ CASE state OF
         END_IF
 
     30: // Move Vertically
-        empCNC(targetX := Xpart, targetY := Ypart, targetZ := Zpart - 50, start := TRUE);
+        empCNC(targetX := constante.Xpart, targetY := constante.Ypart, targetZ := constante.Zpart - 50, start := TRUE);
         IF empCNC.done THEN
             empCNC(start := FALSE);
             state := 40;
         END_IF
 
     40: // Move to box
-        empCNC(targetX := Xbox, targetY := Ybox, targetZ := Zbox, start := TRUE);
+        empCNC(targetX := constante.XboxMetal, targetY := constante.YboxMetal, targetZ := constante.ZboxMetal, start := TRUE);
         IF empCNC.done THEN
             empCNC(start := FALSE);
             state := 50;
@@ -69,7 +58,7 @@ CASE state OF
         END_IF
 
     60: // Return to idle position
-        empCNC(targetX := Xidle, targetY := Yidle, targetZ := Zidle, start := TRUE);
+        empCNC(targetX := constante.Xidle, targetY := constante.Yidle, targetZ := constante.Zidle, start := TRUE);
         IF empCNC.done THEN
             empCNC(start := FALSE);
             state := 70;
