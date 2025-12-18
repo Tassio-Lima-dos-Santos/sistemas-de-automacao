@@ -35,7 +35,7 @@ CASE state OF
         END_IF
 
     10: // Move to conveyor position
-        empCNC(targetX := Xconveyor, targetY := Yconveyor, targetZ := Zconveyor, start := TRUE);
+        empCNC(targetX := constante.XconveyorPlas, targetY := constante.YconveyorPlas, targetZ := constante.ZconveyorPlas, start := TRUE);
         IF empCNC.done THEN
             empCNC(start := FALSE);
             state := 20;
@@ -61,7 +61,7 @@ CASE state OF
         state := 50;
 
     50: // Return to idle position
-        empCNC(targetX := Xidle, targetY := Yidle, targetZ := Zidle, start := TRUE);
+        empCNC(targetX := constante.Xidle, targetY := constante.Yidle, targetZ := constante.Zidle, start := TRUE);
         IF empCNC.done THEN
             empCNC(start := FALSE);
             state := 60;
