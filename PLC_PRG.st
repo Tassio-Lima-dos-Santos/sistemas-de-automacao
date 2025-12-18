@@ -384,6 +384,8 @@ CASE E_Usi OF
 	END_IF;
 
 	3: // Passar item para a próxima fila 
+
+	// TODO : Arrumar o código aqui, por algum motivo ele fica preso nesse estado no segundo item usinado
 	
   	// Ações
 	pFilaEmp(start := TRUE); // Passa o item que está saindo da fila de usinagem para a fila de empacotamento
@@ -402,7 +404,7 @@ CASE E_Usi OF
 		os_usi := os_reset;
 		
 		global.Fila_usi(clear := TRUE); // Limpa a fila
-		global.Fila_usi(clear := FALSE;)
+		global.Fila_usi(clear := FALSE);
 		
 		os_usi[E_Usi] := TRUE;
 	END_IF
@@ -643,6 +645,8 @@ CASE E_Sup OF
 	FIO.o_LedR := FALSE;
 	FIO.o_LedG := FALSE;
 	FIO.o_LedY := TRUE;
+	contador_classificacao := 0;
+	contador_usinagem := 0;
 
 	trigSPMais(CLK:=FIO.i_SPMais);
 	IF trigSPMais.Q THEN
@@ -722,6 +726,8 @@ CASE E_Sup OF
 	FIO.o_LedR := TRUE;
 	FIO.o_LedG := FALSE;
 	FIO.o_LedY := FALSE;
+	contador_classificacao := 0;
+	contador_usinagem := 0;
   
 	// Transições de estado
 	
