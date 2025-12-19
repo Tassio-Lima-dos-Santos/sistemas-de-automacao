@@ -26,16 +26,18 @@ CASE state OF
         END_IF
 
     10: // Push item into usi queue
+		global.Fila_usi(push := FALSE);
         global.Fila_usi(push := TRUE, itemIn := global.Fila_cla.itemOut);
         IF (global.Fila_usi.itemOut.metal = global.Fila_cla.itemOut.metal) THEN
-            global.Fila_usi(push := FALSE);
             state := 20;
         END_IF
 
     20: // Push item from cla queue
+		global.Fila_cla(pop := FALSE);
         global.Fila_cla(pop := TRUE);
         popTimer(IN := TRUE);
         IF popTimer.Q THEN
+			global.Fila_cla(pop := FALSE);
             popTimer(IN := FALSE);
             state := 30;
         END_IF
