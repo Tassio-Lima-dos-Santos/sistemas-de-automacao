@@ -81,6 +81,7 @@ VAR
 	pFilaUsi : pushFilaUsi;
 
 	// Blocos Funcionais - Empacotamento
+	empCNC : FB_MoveTo;
 	posicionarEstPlas : posicionarEsteiraPlastico;
  	posicionarEstMetal : posicionarEsteiraMetal;
  	movPlas : moverPlastico;
@@ -343,6 +344,7 @@ CASE E_Usi OF
 	
   	// Ações
 	FIO.o_E2     := FALSE; // Esteira 2 desligada
+	FIO.o_MachiningCenterProduceLids := FALSE;
 	FIO.o_RB1_Reset := TRUE; // Reseta o robô
 	FIO.o_RB1_Stop := FALSE; // Impede o robô travado
 	FIO.o_RB1_Start := FALSE; // Impede o robô iniciar o movimento
@@ -356,6 +358,7 @@ CASE E_Usi OF
 	
   	// Ações
 	FIO.o_E2 := TRUE; // Liga a esteira
+	FIO.o_MachiningCenterProduceLids := FALSE;
 	FIO.o_RB1_Reset := FALSE; // Impede o robô de resetar
 	FIO.o_RB1_Stop := TRUE; // Deixa o robô travado
 	FIO.o_RB1_Start := FALSE; // Impede o robô iniciar o movimento
@@ -369,6 +372,7 @@ CASE E_Usi OF
 	2: // Usinagem
 	
   	// Ações
+	FIO.o_E2 := TRUE; // Liga a esteira
 	// Se o item for metal, ele recebe o design fundo, se for plástico recebe o design de lids
 	FIO.o_MachiningCenterProduceLids := NOT(global.Fila_usi.itemOut.metal);
 	FIO.o_RB1_Reset := FALSE; // Impede o robô de resetar
@@ -388,6 +392,11 @@ CASE E_Usi OF
 	// TODO : Arrumar o código aqui, por algum motivo ele fica preso nesse estado no segundo item usinado
 	
   	// Ações
+	FIO.o_E2 := TRUE; // Liga a esteira
+	FIO.o_MachiningCenterProduceLids := FALSE;
+	FIO.o_RB1_Reset := FALSE; // Impede o robô de resetar
+	FIO.o_RB1_Stop := FALSE; // Impede o robô travado
+	FIO.o_RB1_Start := FALSE; // Impede o movimento do robô
 	pFilaEmp(start := TRUE); // Passa o item que está saindo da fila de usinagem para a fila de empacotamento
   
 	// Transições de estado
@@ -411,6 +420,7 @@ CASE E_Usi OF
 	
   	// Ações
 	FIO.o_E2     := FALSE; // Desliga a esteira
+	FIO.o_MachiningCenterProduceLids := FALSE;
 	FIO.o_RB1_Reset := FALSE; // Impede o robô de resetar
 	FIO.o_RB1_Stop := TRUE; // Deixa o robô travado
 	FIO.o_RB1_Start := FALSE; // Impede o robô iniciar o movimento
@@ -465,6 +475,7 @@ CASE E_Emp OF
 		os_emp[E_Emp] := TRUE;
 	END_IF 
   	// Ações
+	empCNC(targetX := constante.Xidle, targetY := constante.Yidle, targetZ := constante.Zidle, start := TRUE);
 	FIO.o_E3          := FALSE;
 	FIO.o_EPLASTIC1 := FALSE;
 	FIO.o_EPLASTIC2 := FALSE;
@@ -475,6 +486,7 @@ CASE E_Emp OF
   
 	// Transições de estado
   	IF Maquina3 THEN // Se a máquina supervisora mandar o sinal de ligar, a máquina de empacotamento sai do ócio
+		empCNC(start := FALSE);
 		E_Emp := 1;
 	END_IF;
 	
