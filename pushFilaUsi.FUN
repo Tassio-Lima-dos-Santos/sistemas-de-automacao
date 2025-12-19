@@ -1,8 +1,8 @@
 FUNCTION pushFilaUsi : BOOL
 VAR_INPUT
-VAR_END;
+END_VAR
 VAR
-VAR_END;
+END_VAR
 
 global.Fila_usi.itemIn.metal := global.Fila_cla.itemOut;
 global.Fila_usi(push := TRUE);
