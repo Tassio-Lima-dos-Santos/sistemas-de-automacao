@@ -1,8 +1,8 @@
 FUNCTION registrarItem : BOOL
 VAR_INPUT
-VAR_END;
+END_VAR
 VAR
-VAR_END;
+END_VAR
 
 global.Fila_cla.itemIn.metal := FIO.i_SI;
 global.Fila_cla(push := TRUE);
