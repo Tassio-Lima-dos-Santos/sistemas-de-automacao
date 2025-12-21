@@ -55,15 +55,14 @@ VAR
 	caixa    : BOOL;
 	
 	// Timers dos sensores
-	Timer_sc  	  : TON := (PT := T#60S);
-	Timer_op1 	  : TON := (PT := T#60S);
-	Timer_op2     : TON := (PT := T#60S);
-	Timer_op3     : TON := (PT := T#120S);
+	Timer_sc  	  : TON := (PT := T#30S);
+	Timer_op1 	  : TON := (PT := T#30S);
+	Timer_op2     : TON := (PT := T#30S);
+	Timer_op3     : TON := (PT := T#50S);
 	
 	// Delays
 	Delay_Cla_metal : TP := (PT := T#1S); // Delay da classificação metal
 	delayEstabilizarBalanca : TON := (PT := T#2S); // Delay da balança
-	delayConclusaoUsi : TON := (PT := T#0.5S); // Delay para voltar ao estado inicial após concluir uma usinagem
 	
 	// Triggers
 	trigSC : R_TRIG; // Trigger ativo na subida do sensor SC, 
@@ -176,6 +175,14 @@ CASE E_Cla OF
 	END_IF;
 	
 	1: // Liga Esteira
+	// Ação oneshot
+	IF NOT os_cla[E_Cla] THEN
+		os_cla := os_reset;
+		
+		
+		
+		os_cla[E_Cla] := TRUE;
+	END_IF
 	
 	// Ações
 	FIO.o_E1    := TRUE; // Deixa a esteira 1 ligada
@@ -191,6 +198,14 @@ CASE E_Cla OF
 	END_IF;
 	
 	2: // Espera estabilizar peso
+	// Ação oneshot
+	IF NOT os_cla[E_Cla] THEN
+		os_cla := os_reset;
+		
+		
+		
+		os_cla[E_Cla] := TRUE;
+	END_IF
 	
   	// Ações
 	delayEstabilizarBalanca(IN := TRUE); // Delay para estabilizar a balança
@@ -259,6 +274,7 @@ CASE E_Cla OF
 	IF NOT os_cla[E_Cla] THEN
 		os_cla := os_reset;
 		
+		pushFilaUsi();
 		contador_classificacao := contador_classificacao + 1; // Aumenta a contagem dos itens que passaram na classificação
 		
 		os_cla[E_Cla] := TRUE;
@@ -267,8 +283,6 @@ CASE E_Cla OF
   	// Ações
 	FIO.o_E1 := TRUE;
 	FIO.o_E_SP := TRUE; // Liga a esteira da balança
-	pushFilaUsi();
-
 
 	// Transições de estado
     IF NOT FIO.i_DS2 THEN // Se não detectar mais com o sensor óptico, volta ao início
@@ -299,6 +313,14 @@ CASE E_Cla OF
 	// Transições de estado
   
 	7: // Espera
+	// Ação oneshot
+	IF NOT os_cla[E_Cla] THEN
+		os_cla := os_reset;
+		
+		
+		
+		os_cla[E_Cla] := TRUE;
+	END_IF
 	
   	// Ações
 	FIO.o_E1          := FALSE;
@@ -365,10 +387,17 @@ CASE E_Usi OF
 	END_IF;
 	
 	1: // Liga Esteira
+	// Ação oneshot
+	IF NOT os_usi[E_Usi] THEN
+		os_usi := os_reset;
+		
+		
+		
+		os_usi[E_Usi] := TRUE;
+	END_IF
 	
   	// Ações
 	FIO.o_E2 := TRUE; // Liga a esteira
-	FIO.o_MachiningCenterProduceLids := NOT(global.Fila_usi.itemOut.metal);
 	FIO.o_RB1_Reset := FALSE; // Impede o robô de resetar
 	FIO.o_RB1_Stop := TRUE; // Deixa o robô travado
 	FIO.o_RB1_Start := FALSE; // Impede o robô iniciar o movimento
@@ -380,6 +409,14 @@ CASE E_Usi OF
 	END_IF;
 	
 	2: // Usinagem
+	// Ação oneshot
+	IF NOT os_usi[E_Usi] THEN
+		os_usi := os_reset;
+		
+		
+		
+		os_usi[E_Usi] := TRUE;
+	END_IF
 	
   	// Ações
 	FIO.o_E2 := TRUE; // Liga a esteira
@@ -398,21 +435,23 @@ CASE E_Usi OF
 	END_IF;
 
 	3: // Passar item para a próxima fila 
+	// Ação oneshot
+	IF NOT os_usi[E_Usi] THEN
+		os_usi := os_reset;
+		
+		pushFilaEmp();
+		
+		os_usi[E_Usi] := TRUE;
+	END_IF
 	
   	// Ações
-	FIO.o_E2 := TRUE; // Liga a esteira
-	FIO.o_MachiningCenterProduceLids := NOT(global.Fila_usi.itemOut.metal);
+	FIO.o_E2 := FALSE; // Desliga a esteira
 	FIO.o_RB1_Reset := FALSE; // Impede o robô de resetar
 	FIO.o_RB1_Stop := FALSE; // Impede o robô travado
 	FIO.o_RB1_Start := FALSE; // Impede o movimento do robô
-	pushFilaUsi();
-	delayConclusaoUsi(IN := TRUE);
   
 	// Transições de estado
-  	IF delayConclusaoUsi.Q THEN // Se o movimento 1 do braço robótico for concluído, passa pro próximo estado
-		delayConclusaoUsi(IN := FALSE);
-		E_Usi := 1; // Volta pro estado 1
-	END_IF;
+	E_Usi := 1; // Volta pro estado 1
 
 
 	
@@ -499,6 +538,15 @@ CASE E_Emp OF
 	END_IF;
 	
 	1: // Posicionar esteira de plástico
+	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
+	
 	// Ações
 	FIO.o_E3 := FALSE;
 	posicionarEstPlas(start:=TRUE);
@@ -510,6 +558,15 @@ CASE E_Emp OF
 	END_IF;
 	
 	2: // Posicionar esteira de metal
+	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
+	
   	// Ações
 	FIO.o_E3 := FALSE;
 	posicionarEstMetal(start:=TRUE);
@@ -521,6 +578,15 @@ CASE E_Emp OF
 	END_IF;
 	
 	3: // Ligar esteira
+	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
+	
   	// Ações
 	FIO.o_E3 := TRUE;
 	FIO.o_EPLASTIC1 := FALSE;
@@ -542,6 +608,15 @@ CASE E_Emp OF
 	END_IF;
 	
 	4: // Mover plástico
+	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
+	
   	// Ações
 	movPlas(start:=TRUE);
 	FIO.o_EPLASTIC1 := FALSE;
@@ -566,6 +641,15 @@ CASE E_Emp OF
   	END_IF;
 	
   	5: // Mover metal
+	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
+	
 	// Ações
 	movMetal(start:=TRUE);
 	FIO.o_EPLASTIC1 := FALSE;
@@ -589,6 +673,15 @@ CASE E_Emp OF
   	END_IF;
 
   	6: // Mover esteira plástico
+	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
+	
   	// Ações
 	reposicionarEstPlas(start:=TRUE);
   
@@ -600,6 +693,15 @@ CASE E_Emp OF
 	END_IF;
 	
   	7: // Mover esteira metal
+	// Ação oneshot
+	IF NOT os_emp[E_Emp] THEN
+		os_emp := os_reset;
+		
+		
+		
+		os_emp[E_Emp] := TRUE;
+	END_IF 
+	
   	// Ações
   	reposicionarEstMetal(start:=TRUE);
   
