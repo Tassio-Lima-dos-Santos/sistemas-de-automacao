@@ -1,3 +1,4 @@
+{attribute 'qualified_only'}
 VAR_GLOBAL CONSTANT
     Xidle : INT := 500;
     Yidle : INT := 500;
