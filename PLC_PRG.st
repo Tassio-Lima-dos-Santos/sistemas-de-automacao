@@ -528,6 +528,8 @@ CASE E_Emp OF
 	FIO.o_EMETAL1 := FALSE;
 	FIO.o_EMETAL2 := FALSE;
 	FIO.o_EMETAL3 := FALSE;
+	metal_counter := 0;
+	plastico_counter := 0;
   
 	// Transições de estado
   	IF Maquina3 THEN // Se a máquina supervisora mandar o sinal de ligar, a máquina de empacotamento sai do ócio
@@ -728,6 +730,8 @@ CASE E_Emp OF
 	FIO.o_EMETAL1 := FALSE;
 	FIO.o_EMETAL2 := FALSE;
 	FIO.o_EMETAL3 := FALSE;
+	metal_counter := 0;
+	plastico_counter := 0;
   
 	
 	ELSE // Caso a máquina não esteja em nenhum estado válido, ela retorna ao estado ocioso 
