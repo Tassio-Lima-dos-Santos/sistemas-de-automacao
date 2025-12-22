@@ -85,8 +85,6 @@ VAR
  	posicionarEstMetal : posicionarEsteiraMetal;
  	movPlas : moverPlastico;
  	movMetal : moverMetal;
-	reposicionarEstPlas : reposicionarEsteiraPlastico;
-	reposicionarEstMetal : reposicionarEsteiraMetal;
 	
 END_VAR
 
