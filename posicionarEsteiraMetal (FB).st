@@ -18,26 +18,26 @@ trigStart(CLK:=start);
 
 CASE state OF
 
-    0: // Idle
+    0: // Estado ocioso
         IF trigStart.Q THEN
             state := 10;
 			done := FALSE;
         END_IF
 
-    10: // Turn on conveyor
+    10: // Liga as esteiras
         FIO.o_EMETAL1 := TRUE;
         FIO.o_EMETAL2 := TRUE;
         FIO.o_EMETAL3 := TRUE;
         state := 20;
 
 
-    20: // Wait for trigger
+    20: // Aguarda pelo trigger do sensor
         trigSensor(CLK:=FIO.i_DS4);
         IF trigSensor.Q THEN
             state := 30;
         END_IF
 
-    30: // Turn off conveyor
+    30: // Desliga as esteiras
         FIO.o_EMETAL1 := FALSE;
         FIO.o_EMETAL2 := FALSE;
         FIO.o_EMETAL3 := FALSE;

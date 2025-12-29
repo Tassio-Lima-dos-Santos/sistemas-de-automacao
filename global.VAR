@@ -1,7 +1,0 @@
-{attribute 'qualified_only'}
-VAR_GLOBAL
-	// Filas de itens
-	Fila_cla : FB_PRODUCT_QUEUE;
-	Fila_usi : FB_PRODUCT_QUEUE;
-	Fila_emp : FB_PRODUCT_QUEUE;
-END_VAR
