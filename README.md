@@ -203,6 +203,8 @@ Control and Automation Engineering – UFSC
 
 ## 📄 Notes
 
+Many files and variables names and all comments are written in portuguese, which is my native language.
+
 This project is part of a personal engineering portfolio and demonstrates practical skills in:
 
 * PLC programming (Structured Text)
