@@ -43,10 +43,6 @@ All items are weighed, and based on the measured value:
 * **Cardboard boxes are identified and discarded** using the pneumatic actuator
 * Plastic and metal parts proceed further into the line
 
-
-https://github.com/user-attachments/assets/35f377f6-2c3e-4610-95fa-4f79c90aeb80
-
-
 ---
 
 ### 3. Manufacturing Cell (Robotic Machining)
@@ -176,7 +172,7 @@ The project was designed with **industrial robustness** in mind and could be ada
 
 > *Wide-angle view of the entire line operating continuously.*
 
-📌 **Insert video here**
+[![Production Line Overview](https://img.youtube.com/vi/4HPxFV_qLkE/0.jpg)](https://www.youtube.com/watch?v=4HPxFV_qLkE)
 
 ---
 
