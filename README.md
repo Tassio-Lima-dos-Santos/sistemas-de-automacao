@@ -176,14 +176,6 @@ The project was designed with **industrial robustness** in mind and could be ada
 
 ---
 
-### 🖼️ Screenshots
-
-> *Key moments and subsystems of the Factory I/O plant.*
-
-📌 **Insert images here**
-
----
-
 ## 🚀 Possible Improvements
 
 * HMI / SCADA integration
